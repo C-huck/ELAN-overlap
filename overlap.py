@@ -3,7 +3,7 @@ import pandas as pd
 
 def eaf_read(fileName):
   #read in eaf (xml) file
-  with open("PoS2.eaf") as fp:
+  with open(fineName) as fp:
       xml_doc = fp.read()
   fp.close()
 
@@ -13,23 +13,21 @@ def eaf_read(fileName):
   #FIND TIME SLOTS
   master_ts = soup.find_all("TIME_SLOT")
 
-
   #FIND TIER NAMES   
   a = soup.find_all("TIER")
   tier_names = [s['TIER_ID'] for s in a]
   
-  return soup,master_ts,tier_names
+  return tier_names,master_ts,soup
 
 def get_start_stop(tier_names,master_ts,soup):    
     time_slots=[]
     annotation_values=[]
-    for i in range(0,len(tier_names)):
+    for i in range(len(tier_names)):
         tiers = soup.find_all('TIER',TIER_ID=tier_names[i])
-        #tiers
         c = tiers[0].find_all('ANNOTATION')
         start = []
         annote = []
-        for j in range(0,len(c)):
+        for j in range(len(c)):
             d = c[j].find_all('ALIGNABLE_ANNOTATION')
             e = [s['TIME_SLOT_REF1'] for s in d][0]
             ee = [s['TIME_SLOT_REF2'] for s in d][0]
@@ -58,7 +56,7 @@ def overlaps(base,ref,time_slots,annotation_values):
                 results.append([annotation_values[base][i],annotation_values[ref][ii],"left edge",yy[3]-y[2]])
     return results
 
-soup,master_ts,tier_names = eaf_read("PoS2.eaf")
+tier_names,master_ts,soup = eaf_read("PoS2.eaf")
 
 time_slots, annotation_values = get_start_stop(tier_names,master_ts,soup)
 
