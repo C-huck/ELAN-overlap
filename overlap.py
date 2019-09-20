@@ -3,7 +3,7 @@ import pandas as pd
 
 def eaf_read(fileName):
   #read in eaf (xml) file
-  with open(fineName) as fp:
+  with open(fileName) as fp:
       xml_doc = fp.read()
   fp.close()
 
