@@ -41,3 +41,8 @@ Download `overlap_v2.py` to a folder containing the .eaf files you want to analy
    -*Exclude short overlaps*: Calculates the duration of each overlap and excludes those shorter than a set threshhold. The use may choose a threshhold (in whatever temporal resolution the matrix was constructed in) or choose 'auto.' 'Auto' excludes overlaps that are one standard deviation shorter than the mean overlap duration. 
    
 Results are saved as `.csv` files according to the following scheme: input filename + analysis + selected tiers .csv. For the iteration option, the output scheme is: input filename + iteration number . csv. 
+
+### Tips:
+
+1. The inclusion of >13 tiers is unsupported.
+2. `get_overlaps()` returns a 'hit' iff there is an overlap between each selected tier at a given time. Annotations that transitively overlap (e.g., Annot A overlaps Annot B, Annot B overlaps Annot C, but Annot C does not overlap Annot A) are not counted. 
