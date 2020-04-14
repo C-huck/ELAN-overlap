@@ -3,18 +3,41 @@ Extract temporal information about annotations on different tiers in ELAN.
 
 ## Version 1 (overlap.py)
 So far:
-  1. reports overlaps between two tiers
-  2. reports type of overlap (right edge, left edge, contains and is-contained
-  3. reports duration of overlaps
+  - [x] reports overlaps between two tiers
+  - [x] reports type of overlap (right edge, left edge, contains and is-contained
+  - [x] reports duration of overlaps
   
 To do:
-  1. flexibly apply algorithm to user-specified number of tiers
-  2. add keyword search
+  - [ ] flexibly apply algorithm to user-specified number of tiers
+  - [ ] add keyword search
   
 ## Version 2 (overlap_v2.py)
 So far:
-1. reports annotations of a single tier and their frequencies
-2. reports number of overlaps between user-specified number of tiers; prints all overlapping annotations
-3. reports annotations overlapping a user-specified annotation
+  - [x] reports annotations of a single tier and their frequencies
+  - [x] reports number of overlaps between user-specified number of tiers; prints all overlapping annotations
+  - [x] reports annotations overlapping a user-specified annotation
 
-# To use v2:
+To do:
+  - [ ] annotation/ overlap duration stats
+  - [ ] graphical output
+
+
+# Instructions for use (v1):
+`overlap_v2.py` is written in Python 3, and uses `bs4` (BeautifulSoup), `numpy`, `pandas`, `glob`, `collections`, and `itertools`. Read/ write access to the working directory is required. 
+
+Download `overlap_v2.py` to a folder containing the .eaf files you want to analyze. Run the file using a command window and follow the prompts on the console. 
+
+1. Choose file 
+2. Choose temporal resolution, in msec. The algorithm reconstructs the eaf file as a matrix at the given resoltution. If your annotations are fine-grained, use 1. Note that building the matrix will take longer at shorter temporal resolutions, but accuracy is much higher. 
+3. Choose tiers to include. You may choose an arbitrary number of tiers to include. Incude all by typing 'all.' Note that the matrix is built only once. If you choose all, you can later search any subset of tiers. If you choose some subset at the start, only those tiers are available to search later.
+4. Available functions:
+   - *Get annotations*: Returns the frequency of each annotation on a user-specified tier
+   - *Get overlaps*: Returns the number of overlaps (and overlapping annotations) between a user-specified set of tiers
+   - *Word search*: Returns the annotations that overlap a user-specified word and the frequency of overlap
+   - *Start over*: Rebuild the matrix, using fewer or more tiers.
+   - *Quit*: Destroys matrix, exits program
+5. Available options:
+   - *Iterations*: The `get_overlaps()` function allows you to return overlap data for every combination of user-selected tiers. If `Tier0`, `Tier1`, and `Tier2` are selected, the function returns annotation frequencies for each and overlap frequencies for `Tier0`-`Tier1`, `Tier1`-`Tier2`, and `Tier0`-`Tier1`-`Tier2`.
+   -*Exclude short overlaps*: Calculates the duration of each overlap and excludes those shorter than a set threshhold. The use may choose a threshhold (in whatever temporal resolution the matrix was constructed in) or choose 'auto.' 'Auto' excludes overlaps that are one standard deviation shorter than the mean overlap duration. 
+   
+Results are saved as `.csv` files according to the following scheme: input filename + analysis + selected tiers .csv. For the iteration option, the output scheme is: input filename + iteration number . csv. 
