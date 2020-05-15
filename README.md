@@ -1,5 +1,5 @@
 # ELAN-overlap
-Extract temporal information about annotations on different tiers in ELAN. 
+Allows users to extract temporal information between annotations on different tiers in ELAN. Useful for quickly quantifying simultaneous actions (e.g., speech + gesture, joint attention + touching, facial expressions + speech).
 
 ## Version 1 (overlap.py)
 So far:
