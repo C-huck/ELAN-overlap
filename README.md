@@ -1,7 +1,7 @@
 # ELAN-overlap
 Allows users to extract temporal information between annotations on different tiers in ELAN. Useful for quickly quantifying simultaneous actions (e.g., speech + gesture, joint attention + touching, facial expressions + speech).
 
-## Version 1 (overlap.py)
+~~ ## Version 1 (overlap.py) ~~ incorporated into `ELAN_overlap.py`
 So far:
   - [x] reports overlaps between two tiers
   - [x] reports type of overlap (right edge, left edge, contains and is-contained
@@ -11,19 +11,26 @@ To do:
   - [ ] flexibly apply algorithm to user-specified number of tiers
   - [ ] add keyword search
   
-## Version 2 (overlap_v2.py)
+## Version 2 (ELAN_overlap.py)
 So far:
   - [x] reports annotations of a single tier and their frequencies
   - [x] reports number of overlaps between user-specified number of tiers; prints all overlapping annotations
   - [x] reports annotations overlapping a user-specified annotation
+  
+ New (09/14/20):
+  - [x] incorporated Version 1 (overlap.py) functionality into `ELAN_overlap.py`
+  - [x] bug fix: Child and grandchild tiers now supported
+  - [x] bug fix: Empty tiers (i.e., have no annotations) are now dropped
+  - [x] removed semi-functional `reset` function
 
 To do:
+  - [ ] overhaul results display and saving functions (tier names clipped if long, too many exported .csv files, etc.)
   - [ ] annotation/ overlap duration stats
   - [ ] graphical output
 
 
 # Instructions for use (v2):
-`overlap_v2.py` is written in Python 3, and uses `bs4` (BeautifulSoup), `numpy`, `pandas`, `glob`, `collections`, and `itertools`. Read/ write access to the working directory is required. 
+`overlap_v2.py` is written in Python 3, and uses `bs4` (BeautifulSoup) with the `lxml` parser, `numpy`, `pandas`, `glob`, `collections`, and `itertools`. Read/ write access to the working directory is required. 
 
 Download `overlap_v2.py` to a folder containing the .eaf files you want to analyze. Run the file using a command window and follow the prompts on the console. 
 
