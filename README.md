@@ -1,15 +1,5 @@
 # ELAN-overlap
 Allows users to extract temporal information between annotations on different tiers in ELAN. Useful for quickly quantifying simultaneous actions (e.g., speech + gesture, joint attention + touching, facial expressions + speech).
-
-## ~~Version 1 (overlap.py)~~ incorporated into `ELAN_overlap.py`
-So far:
-  - [x] reports overlaps between two tiers
-  - [x] reports type of overlap (right edge, left edge, contains and is-contained
-  - [x] reports duration of overlaps
-  
-To do:
-  - [ ] flexibly apply algorithm to user-specified number of tiers
-  - [ ] add keyword search
   
 ## Version 2 (ELAN_overlap.py)
 So far:
@@ -54,3 +44,13 @@ Results are saved as `.csv` files according to the following scheme: input filen
 
 1. The inclusion of >13 tiers is unsupported.
 2. `get_overlaps()` returns a 'hit' iff there is an overlap between each selected tier at a given time. Annotations that transitively overlap (e.g., Annot A overlaps Annot B, Annot B overlaps Annot C, but Annot C does not overlap Annot A) are not counted. 
+
+## ~~Version 1 (overlap.py)~~ incorporated into `ELAN_overlap.py`
+So far:
+  - [x] reports overlaps between two tiers
+  - [x] reports type of overlap (right edge, left edge, contains and is-contained
+  - [x] reports duration of overlaps
+  
+To do:
+  - [ ] flexibly apply algorithm to user-specified number of tiers
+  - [ ] add keyword search
