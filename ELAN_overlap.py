@@ -6,6 +6,7 @@ Created on Fri Mar 27 22:23:47 2020
 """
 
 from bs4 import BeautifulSoup
+import lxml
 from collections import Counter
 import numpy as np
 import pandas as pd
