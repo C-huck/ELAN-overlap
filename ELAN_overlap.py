@@ -18,7 +18,7 @@ class AnnotationObject:
         self.resolution = resolution
         self.tier_names,self.master_ts,self.soup = self.eaf_read()
         tier_indices = list(range(len(self.tier_names)))
-        tier_options = zip(tier_indices,self.tier_names)
+        tier_options = zip(tier_indices,[x[:10]+"..."+x[-5:] if len(x)>20 else x for x in self.tier_names])
         print("The tier names are",[x for x in tier_options])
         print("Enter tier numbers separated by commas (e.g., 0,1,2) or type \"all\" for all tiers")
         sel_tiers = input("Which tiers do you want?: ")
@@ -28,7 +28,7 @@ class AnnotationObject:
             sel_tiers = [int(x) for x in sel_tiers.split(",")]
             self.sel_tiers = [self.tier_names[x] for x in sel_tiers]
         print("Fetching annotations, timeslots...")
-        self.time_slots, self.annotation_values, self.sel_tiers = self.get_start_stop(resolution=self.resolution)
+        self.time_slots, self.annotation_values, self.sel_tiers, self.skipped_tiers = self.get_start_stop(resolution=self.resolution)
         self.last_time_slot = self.get_timeslot_len()
         print("Building matrix")
         self.matrix = self.build_matrix()
@@ -77,15 +77,33 @@ class AnnotationObject:
         else:
             return False
 
+    def get_annotation_IDs(self,tier):
+        """
+        Links child tiers to parent tiers via annotation refs and annotation ids
+        """
+        annotation_ids = []
+        annotation_refs = []
+        if len(tier.find_all('REF_ANNOTATION')) > 0:
+            for x in tier.find_all('REF_ANNOTATION'):
+                annotation_ids.append(x['ANNOTATION_ID'])
+                annotation_refs.append(x['ANNOTATION_REF'])
+        else:
+            for x in tier.find_all('ALIGNABLE_ANNOTATION'):
+                annotation_ids.append(x['ANNOTATION_ID'])
+                annotation_refs.append(None)
+        return annotation_ids,annotation_refs
+
     def get_parent_tier(self,tiers):
         """
         Retrieve time slot information from parent tier
-        Returns parent tier
+        Returns parent tier, annotation ids and annotations refs
         """
         parent_ref = tiers[0]['PARENT_REF']
         parent_tier = self.soup.find_all('TIER',TIER_ID=parent_ref)
         if parent_tier[0].ALIGNABLE_ANNOTATION:
-            return parent_tier
+            _,annotation_refs = self.get_annotation_IDs(tiers[0])
+            annotation_ids,_ = self.get_annotation_IDs(parent_tier[0])
+            return parent_tier, set(annotation_ids) & set(annotation_refs)
         else:
             parent_tier = self.get_parent_tier(parent_tier)
             return parent_tier
@@ -98,13 +116,15 @@ class AnnotationObject:
         time_slots=[]
         annotation_values=[]
         new_sel_tiers = []
+        skipped_tiers = []
         for i in range(len(self.sel_tiers)):
             tiers = self.soup.find_all('TIER',TIER_ID=self.sel_tiers[i])
             c = tiers[0].find_all('ANNOTATION')
             start = []
             annote = []
             if len(c) == 0:
-                print("No annotations on {}. Skipping.".format(self.sel_tiers[i]))
+                #print("No annotations on {}. Skipping.".format(self.sel_tiers[i]))
+                skipped_tiers.append(self.sel_tiers[i])
             else:
                 new_sel_tiers.append(self.sel_tiers[i])
                 if self.check_for_parent_tier(c):
@@ -122,26 +142,31 @@ class AnnotationObject:
                     time_slots.append(start)
                     annotation_values.append(annote)
                 else:
-                    parent_tier = self.get_parent_tier(tiers)
+                    parent_tier, annot_IDs = self.get_parent_tier(tiers)
                     parent_tier_annot = parent_tier[0].find_all('ANNOTATION')
-                    for j in range(len(parent_tier_annot)):
-                        parent_annot = parent_tier_annot[j].find_all('ALIGNABLE_ANNOTATION')
-                        e = [s['TIME_SLOT_REF1'] for s in parent_annot][0]
-                        ee = [s['TIME_SLOT_REF2'] for s in parent_annot][0]
-                        for f in self.master_ts:
-                            if f["TIME_SLOT_ID"] == e:
-                                g = int(round(int(f["TIME_VALUE"])/resolution,0))
-                            if f["TIME_SLOT_ID"] == ee:
-                                gg = int(round(int(f["TIME_VALUE"])/resolution,0))
-                        start.append([[int(s['TIME_SLOT_REF1'][2:]) for s in parent_annot][0],[int(s['TIME_SLOT_REF2'][2:]) for s in parent_annot][0],g,gg])
-                        annote.append(c[j].ANNOTATION_VALUE.string)
+                    for i,y in enumerate(annot_IDs):
+                        for j in range(len(parent_tier_annot)):
+                            if len(parent_tier_annot[j].find_all('ALIGNABLE_ANNOTATION',ANNOTATION_ID=y)) > 0:
+                                parent_annot = parent_tier_annot[j].find_all('ALIGNABLE_ANNOTATION',ANNOTATION_ID=y)
+                                e = [s['TIME_SLOT_REF1'] for s in parent_annot][0]
+                                ee = [s['TIME_SLOT_REF2'] for s in parent_annot][0]
+                                for f in self.master_ts:
+                                    if f["TIME_SLOT_ID"] == e:
+                                        g = int(round(int(f["TIME_VALUE"])/resolution,0))
+                                    if f["TIME_SLOT_ID"] == ee:
+                                        gg = int(round(int(f["TIME_VALUE"])/resolution,0))
+                                start.append([[int(s['TIME_SLOT_REF1'][2:]) for s in parent_annot][0],[int(s['TIME_SLOT_REF2'][2:]) for s in parent_annot][0],g,gg])
+                                annote.append(c[i].ANNOTATION_VALUE.string)
+                            else:
+                                continue
                     time_slots.append(start)
                     annotation_values.append(annote)
                 print('\r',round(i/len(self.sel_tiers)*100),' percent complete', end='')
                 print('\r', end='')
         print("100")
-        print(new_sel_tiers)
-        return time_slots, annotation_values, new_sel_tiers
+        if len(skipped_tiers) > 0:
+            print("{} tiers did not contain annotations and were skipped.".format(len(skipped_tiers)))
+        return time_slots, annotation_values, new_sel_tiers, skipped_tiers
 
     def get_timeslot_len(self):
         """
@@ -173,7 +198,7 @@ class AnnotationObject:
 
     def overlap_relationships(self,base,ref):
         """
-
+        For any two tiers, reports overlaps, type of overlap (e.g., contains, is contained by, etc.), and overlap duration
         """
         results =[]
         for i,y in enumerate(self.time_slots[base]):
@@ -193,6 +218,9 @@ class AnnotationObject:
         return results
 
     def get_overlap_durations(self,hits):
+        """
+        Computes duration of overlap at time denoted by 'hits'
+        """
         durations = []
         for x in hits:
             i = 0
@@ -202,11 +230,17 @@ class AnnotationObject:
         return durations
 
     def get_threshhold(self,vector):
+        """
+        Computes a threshhold set at one standard deviation below the mean of 'vector'
+        """
         mean = np.mean(vector)
         std = np.std(vector)
         return mean - std
 
     def prune_short_annotations(self,hits):
+        """
+        Excludes overlaps that are shorter than a given temporal threshhold
+        """
         g = input("Enter threshhold (in units per your temporal resolution) or choose 'auto': ")
         durations = self.get_overlap_durations(hits)
         if g == "auto":
@@ -216,6 +250,9 @@ class AnnotationObject:
         return [y for (x,y) in zip(durations,hits) if x > threshhold]
 
     def pretty_print(self,df,sel_tiers):
+        """
+        Helper function to display results neatly in console
+        """
         if type(sel_tiers) == int:
             col_names = self.sel_tiers[sel_tiers]
         else:
@@ -223,7 +260,8 @@ class AnnotationObject:
         df[col_names] = df['index'].str.split("|",expand=True)
         df = df.drop(["index"],axis=1)
         df = df.rename(columns={0:"Frequency"})
-        return df
+        shorten = lambda x: x[:10]+x[:-5] if len(x) > 20 else x
+        return df.rename(shorten,axis='columns')
 
     def overlapping_annotations(self,hits,matrix):
         overlapped_annots = []
@@ -391,8 +429,8 @@ if __name__ == '__main__' :
     except:
         print("Choice must be a single integer")
     ELAN_file = AnnotationObject(choice,resolution)
-    function_options = [(0, 'Get annotations'), (1, 'Get overlaps'), (2, 'Word Search'), (3, 'Get overlap relationships'), (4,'Quit')]
-    tier_options = list(zip(list(range(len(ELAN_file.sel_tiers))),ELAN_file.sel_tiers))
+    function_options = [(0, 'Get annotations'), (1, 'Get overlaps'), (2, 'Word Search'), (3, 'Get overlap relationships'), (4, 'See selected tiers'), (5, 'See empty tiers'), (6,'Quit')]
+    tier_options = list(zip(list(range(len(ELAN_file.sel_tiers))),[x[:10]+"..."+x[-5:] if len(x)>20 else x for x in ELAN_file.sel_tiers]))
     while True:
         print("Available functions: ",function_options)
         try:
@@ -469,5 +507,11 @@ if __name__ == '__main__' :
                 continue
             ELAN_file.overlap_relationships(sel_tier_ints[0],sel_tier_ints[1])
         if function_choice == 4:
+            print(ELAN_file.sel_tiers)
+            continue
+        if function_choice == 5:
+            print(ELAN_file.skipped_tiers)
+            continue
+        if function_choice == 6:
             del ELAN_file
             break
