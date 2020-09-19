@@ -2,11 +2,10 @@
 """
 Created on Fri Mar 27 22:23:47 2020
 
-@author: Jack
+@author: Chuck
 """
 
 from bs4 import BeautifulSoup
-import lxml
 from collections import Counter
 import numpy as np
 import pandas as pd
@@ -218,14 +217,16 @@ class AnnotationObject:
         print(results)
         return results
 
-    def get_overlap_durations(self,hits):
+    def get_overlap_durations(self,hits,matrix,tiers):
         """
         Computes duration of overlap at time denoted by 'hits'
         """
         durations = []
+        #matrix = matrix[tiers]
         for x in hits:
             i = 0
-            while self.matrix[:,x+1+i].sum() == (len(self.sel_tiers)*12):
+            #while self.matrix[:,x+1+i].sum() == (len(self.sel_tiers)*12):
+            while matrix[tiers,x+1+i].sum() == (len(tiers)*12):
                 i+=1
             durations.append(i)
         return durations
@@ -238,19 +239,19 @@ class AnnotationObject:
         std = np.std(vector)
         return mean - std
 
-    def prune_short_annotations(self,hits):
+    def prune_short_annotations(self,hits,matrix,tiers):
         """
         Excludes overlaps that are shorter than a given temporal threshhold
         """
         g = input("Enter threshhold (in units per your temporal resolution) or choose 'auto': ")
-        durations = self.get_overlap_durations(hits)
+        durations = self.get_overlap_durations(hits,matrix,tiers)
         if g == "auto":
             threshhold = self.get_threshhold(durations)
         else:
             threshhold = int(g)
         return [y for (x,y) in zip(durations,hits) if x > threshhold]
 
-    def pretty_print(self,df,sel_tiers):
+    def pretty_print(self,df,sel_tiers,results="counts"):
         """
         Helper function to display results neatly in console
         """
@@ -258,11 +259,17 @@ class AnnotationObject:
             col_names = self.sel_tiers[sel_tiers]
         else:
             col_names = [self.sel_tiers[j] for j in sel_tiers]
-        df[col_names] = df['index'].str.split("|",expand=True)
-        df = df.drop(["index"],axis=1)
-        df = df.rename(columns={0:"Frequency"})
-        shorten = lambda x: x[:10]+x[:-5] if len(x) > 20 else x
-        return df.rename(shorten,axis='columns')
+        if results == "counts":
+            df[col_names] = df['index'].str.split("|",expand=True)
+            df = df.drop(["index"],axis=1)
+            df = df.rename(columns={0:"Frequency"})
+        else:
+            col_names = col_names +['Duration']
+            df[col_names] = df['index'].str.split("|",expand=True)
+            df = df.drop(["index"],axis=1)
+            df = df.rename(columns={0:"Frequency"})
+        #shorten = lambda x: x[:10]+x[:-5] if len(x) > 20 else x
+        return df#df.rename(shorten,axis='columns')
 
     def overlapping_annotations(self,hits,matrix):
         overlapped_annots = []
@@ -272,7 +279,8 @@ class AnnotationObject:
         if len(overlapped_annots) == 0:
             return None
         else:
-            return Counter(overlapped_annots)
+            #return Counter(overlapped_annots)
+            return overlapped_annots
 
     def overlaps(self,matrix,sel_tiers):
         """
@@ -282,7 +290,7 @@ class AnnotationObject:
         hits = np.where(np.sum(matrix[sel_tiers],axis=0) > max((len(sel_tiers)-1)*13,(len(sel_tiers)*12)))
         hits = np.array(hits).tolist()[0]
         if prune == "y":
-            hits = self.prune_short_annotations(hits)
+            hits = self.prune_short_annotations(hits,matrix,sel_tiers)
         return hits
 
     def word_search(self,tier,term,search_tiers="all",substring=False):
@@ -290,6 +298,7 @@ class AnnotationObject:
             tier = self.tier_translate(tier)
         if search_tiers == "all":
             search_tiers = list(range(len(self.sel_tiers)))
+            search_tiers.remove(tier)
         else:
             if type(search_tiers[0]) == str:
                 search_tiers = self.tier_translate(search_tiers)
@@ -300,24 +309,18 @@ class AnnotationObject:
         if len(string_matches) == 0:
             print("No annotation matches your term")
         else:
-            if len(search_tiers) == 1:
-                #hits = np.nonzero(self.matrix[[tier]+search_tiers])
-                #hits = np.array(hits).tolist()[0]
-                hits = self.overlaps(self.matrix,[tier]+search_tiers)
-            else:
-                hits = self.overlaps(self.matrix,search_tiers)
-            matches = self.compare_lists(string_matches,hits)
+            hits = self.overlaps(self.matrix,[tier]+search_tiers)
+            matches = self.compare_lists(hits,string_matches)
             if len(matches) > 0:
-                if search_tiers=="all":
-                    result = self.overlapping_annotations(matches,self.matrix_a)
-                    sel_tiers = list(range(len(self.sel_tiers)))
-                else:
-                    search_tiers = [tier] + search_tiers
-                    result = self.overlapping_annotations(matches,self.matrix_a[search_tiers])
-                    sel_tiers = search_tiers
-                print("Found "+str(len(result))+" unique hits!")
+                all_tiers = [tier]+search_tiers
+                result = self.overlapping_annotations(matches,self.matrix_a[all_tiers])
+                durations = self.get_overlap_durations(matches,self.matrix,all_tiers)
+                result = [x + "|" + str(y) for (x,y) in zip(result,durations)]
+                result = Counter(result)
                 df_final = pd.DataFrame.from_dict(result, orient='index').reset_index()
-                df_final = self.pretty_print(df_final,sel_tiers)
+                df_final = self.pretty_print(df_final,all_tiers,results="durations")
+                df_final['Duration'] = df_final['Duration'].astype('str')
+                df_final = df_final.groupby(self.tier_translate(all_tiers)).agg({'Frequency': np.sum,'Duration': ', '.join}).reset_index()
                 print(df_final)
                 return df_final
             else:
@@ -358,7 +361,7 @@ class AnnotationObject:
         df = self.pretty_print(df,tier)
         return df
 
-    def get_overlaps(self,sel_tiers,matrix=None,matrix_a=None,iterate=False):
+    def get_overlaps(self,sel_tiers,matrix=None,matrix_a=None,iterate=False,duration=False):
         if matrix == None:
             matrix = self.matrix
         if matrix_a == None:
@@ -392,8 +395,13 @@ class AnnotationObject:
             if results == None:
                 print("No overlaps detected")
             else:
+                durations = self.get_overlap_durations(hits,matrix,sel_tiers)
+                results = [x + "|" + str(y) for (x,y) in zip(results,durations)]
+                results = Counter(results)
                 df = pd.DataFrame.from_dict(results, orient='index').reset_index()
-                df = self.pretty_print(df,sel_tiers)
+                df = self.pretty_print(df,sel_tiers,results="durations")
+                df['Duration'] = df['Duration'].astype('str')
+                df = df.groupby(self.tier_translate(sel_tiers)).agg({'Frequency': np.sum,'Duration': ', '.join}).reset_index()
                 print(df)
                 return df
 
