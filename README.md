@@ -12,15 +12,18 @@ So far:
   - [x] bug fix: Child and grandchild tiers now supported
   - [x] bug fix: Empty tiers (i.e., have no annotations) are now dropped
   - [x] removed semi-functional `reset` function
+  
+ New (09/19/20):
+   - [x] added overlap duration information to `get_overlaps()` and `word_search()`
+   - [x] tier names now clipped in console display if over 20 characters
 
 To do:
-  - [ ] overhaul results display and saving functions (tier names clipped if long, too many exported .csv files, etc.)
-  - [ ] annotation/ overlap duration stats
+  - [ ] overhaul results display and saving functions (too many exported .csv files, etc.)
   - [ ] graphical output
 
 
 # Instructions for use (v2):
-`overlap_v2.py` is written in Python 3, and uses `bs4` (BeautifulSoup) with the `lxml` parser, `numpy`, `pandas`, `glob`, `collections`, and `itertools`. Read/ write access to the working directory is required. 
+`overlap_v2.py` is written in Python 3 (3.7.3), and uses `bs4` (BeautifulSoup) with the `lxml` parser, `numpy`, `pandas`, `glob`, `collections`, and `itertools`. Read/ write access to the working directory is required. 
 
 Download `ELAN_overlap.py` to a folder containing the .eaf files you want to analyze. Run the file using a command window and follow the prompts on the console. 
 
