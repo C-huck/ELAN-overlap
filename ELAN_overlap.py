@@ -179,7 +179,7 @@ class AnnotationObject:
         """
         Builds an empty matrix of 0's according to the size and temporal resolution of the input ELAN file
         """
-        return np.zeros((len(self.sel_tiers),self.last_time_slot), dtype=int)
+        return np.zeros((len(self.sel_tiers),self.last_time_slot+1), dtype=int) #the +1 ensures that get_overlap_durations() can calculate one time unit past the last annotation
 
     def fill_matrix(self):
         """
