@@ -1,6 +1,8 @@
 # ELAN-overlap
 Allows users to extract temporal information between annotations on different tiers in ELAN. Useful for quickly quantifying simultaneous actions (e.g., speech + gesture, joint attention + touching, facial expressions + speech).
 
+An example is given in the following images: (left) Screenshot of part of the ELAN interface, showing complicated temporal overlaps between annotations on different tiers. (right) One possible output of ELAN-overlap, listing pairwise overlaps of annotations on the 1st and 2nd tiers, the type of overlap, and the duration of the overlap. 
+
 ![Screenshot of ELAN](https://github.com/C-huck/C-huck.github.io/raw/master/images/elan.PNG) ![Screenshot of ELAN](https://github.com/C-huck/C-huck.github.io/raw/master/images/elan2.PNG)
 
 
